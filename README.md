@@ -1,10 +1,10 @@
 # 0G Storage TypeScript SDK Starter Kit
 
-This repository demonstrates how to integrate and use the 0G Storage TypeScript SDK in your applications. It provides implementation examples using the 0G decentralized storage network.
+A starter kit demonstrating how to use the 0G Storage TypeScript SDK for decentralized file storage. This example implements a simple CLI tool showcasing the core SDK functionalities.
 
 ## Repository Branches
 
-### 1. Master Branch (Current)
+### 1. Master Branch
 REST API implementation using Express framework with Swagger documentation.
 ```bash
 git checkout master
@@ -12,11 +12,10 @@ git checkout master
 
 - Features:
   - RESTful endpoints for upload/download
-  - Swagger UI for API testing and documentation
-  - TypeScript implementation for type safety
+  - Swagger UI for API testing
 
-### 2. CLI Version Branch (Coming Soon)
-Command-line interface implementation will be available in the cli-version branch.
+### 2. CLI Version Branch (current)
+Command-line interface implementation available in the cli-version branch.
 ```bash
 git checkout cli-version
 ```
@@ -24,167 +23,155 @@ git checkout cli-version
 - Features:
   - Direct file upload/download via CLI
   - Command-line arguments for configuration
-  - TypeScript implementation
 
-## SDK Implementation (Master Branch)
-
-### Storage Client Setup
+## Core Components (CLI Version)
 ```typescript
-// Initialize storage client with network configuration
-import { Indexer } from '@0glabs/0g-ts-sdk';
-
-// Constants from environment variables
-const RPC_URL = process.env.RPC_URL || 'https://evmrpc-testnet.0g.ai/';
-const FLOW_CONTRACT_STANDARD = process.env.FLOW_CONTRACT_STANDARD || '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
-const INDEXER_RPC = process.env.INDEXER_RPC || 'https://indexer-storage-testnet-standard.0g.ai';
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-
-// Initialize Indexer
-const indexer = new Indexer(INDEXER_RPC, RPC_URL, PRIVATE_KEY, FLOW_CONTRACT_STANDARD);
+import { ZgFile, Indexer } from '@0glabs/0g-ts-sdk';  // Core SDK components
 ```
 
-### Understanding Upload & Download
+## Upload Process
 
-#### Upload Implementation
-The upload process involves both API handling and SDK operations:
-
+### 1. Initialize Indexer
+The first step is to create the necessary client for blockchain interaction and node management:
 ```typescript
-app.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-
-  try {
-    // Create ZgFile from uploaded file
-    const zgFile = await ZgFile.fromFilePath(req.file.path);
-    const [tree, treeErr] = await zgFile.merkleTree();
-    
-    if (treeErr !== null) {
-      throw new Error(`Error generating Merkle tree: ${treeErr}`);
-    }
-
-    // Upload file to 0G Storage network
-    const [tx, uploadErr] = await indexer.upload(zgFile);
-
-    if (uploadErr !== null) {
-      throw new Error(`Upload error: ${uploadErr}`);
-    }
-
-    await zgFile.close();
-
-    res.json({
-      rootHash: tree?.rootHash() ?? '',
-      transactionHash: tx
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
+// Initialize indexer with network configuration
+const indexer = new Indexer(
+  INDEXER_RPC,           // Indexer service endpoint
+  RPC_URL,               // EVM RPC endpoint
+  privateKey,            // For signing transactions
+  FLOW_CONTRACT_STANDARD // Flow contract address
+);
 ```
+This sets up:
+- Indexer client for managing storage operations
+- Web3 connection for blockchain transactions
+- Contract interaction capabilities
 
-What happens during upload:
-- File is received via multipart form upload
-- SDK creates a ZgFile instance from the uploaded file
-- Merkle tree is generated for the file
-- File is uploaded to the 0G Storage network
-- Root hash and transaction hash are returned
-
-#### Download Implementation
-The download process retrieves files using their root hash:
-
+### 2. File Preparation & Merkle Tree Generation
+Prepare the file and generate its Merkle tree:
 ```typescript
-app.get('/download/:rootHash', async (req, res) => {
-  const { rootHash } = req.params;
-  const outputPath = `downloads/${rootHash}`;
+// Create ZgFile from file path
+const zgFile = await ZgFile.fromFilePath(filepath);
+const [tree, treeErr] = await zgFile.merkleTree();
 
-  try {
-    const err = await indexer.download(rootHash, outputPath, true);
-    
-    if (err !== null) {
-      throw new Error(`Download error: ${err}`);
-    }
-
-    res.download(outputPath, (err) => {
-      if (err) {
-        console.error('Download error:', err);
-        res.status(500).json({ error: 'Failed to send file' });
-      }
-    });
-  } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
+if (treeErr !== null) {
+  throw new Error(`Error generating Merkle tree: ${treeErr}`);
+}
 ```
+During this phase:
+- File is prepared for upload
+- Merkle tree is constructed for file verification
+- File integrity is validated
 
-What happens during download:
-- Root hash is used to locate the file in the network
-- File is downloaded to a local path
-- Downloaded file is verified
-- File is streamed to the client
+### 3. Upload Operation
+Execute the upload with blockchain transaction:
+```typescript
+// Upload file and get transaction hash
+const [tx, uploadErr] = await indexer.upload(zgFile);
 
-## Usage
+if (uploadErr !== null) {
+  throw new Error(`Upload error: ${uploadErr}`);
+}
 
-1. Clone the repository:
+console.log('Upload successful!');
+console.log('Root Hash:', tree?.rootHash() ?? '');
+console.log('Transaction Hash:', tx);
+```
+This process:
+- Creates and signs a storage transaction
+- Uploads file to the network
+- Returns transaction and root hashes for verification
+
+## Download Process
+
+### 1. Download Operation
+Retrieve and verify the file:
+```typescript
+const err = await indexer.download(rootHash, outputPath, true);
+
+if (err !== null) {
+  throw new Error(`Download error: ${err}`);
+}
+
+console.log('Download successful!');
+console.log('File saved to:', outputPath);
+```
+The process includes:
+- File location using root hash
+- Automatic node selection
+- File integrity verification
+- Local file saving
+
+## Quick Start Examples
+
+### Upload a file
 ```bash
-git clone https://github.com/0glabs/0g-storage-ts-starter-kit
+npm start -- -k YOUR_PRIVATE_KEY upload ./path/to/file
+# Output:
+# Upload successful!
+# Root Hash: 0xdef... (file identifier)
+# Transaction Hash: 0xabc... (blockchain transaction)
 ```
 
-2. Navigate to the project directory:
+### Download a file
 ```bash
-cd 0g-storage-ts-starter-kit
+npm start -- -k YOUR_PRIVATE_KEY download 0xdef... -o ./downloaded_file
+# Output:
+# Download successful!
+# File saved to: ./downloaded_file
 ```
 
-3. Install dependencies:
+## Command Options
 ```bash
-npm install
+Global Options:
+  -k, --key <private_key>    Private key for signing transactions (required)
+  -h, --help                 Display help for command
+  -V, --version             Output the version number
+
+Commands:
+  upload <filepath>          Upload a file to 0G Storage
+  download <roothash>        Download a file from 0G Storage
+  config                     Show current configuration
+
+Download Options:
+  -o, --output <path>       Output path for downloaded file
 ```
-
-4. Copy the .env.example file to .env and set your private key:
-```bash
-cp .env.example .env
-```
-
-5. Start the server:
-```bash
-npm start
-```
-
-6. Access Swagger UI: http://localhost:3000/api-docs
-
-7. Available Endpoints:
-   - POST /upload - Upload a file
-     - Request: multipart/form-data with 'file' field
-     - Response: JSON with rootHash and transactionHash
-   - GET /download/{rootHash} - Download a file
-     - Request: rootHash in URL path
-     - Response: File content stream
 
 ## Network Configuration
-The application uses the following default network configuration which can be overridden through environment variables:
-
 ```typescript
+// Default network configuration
 const RPC_URL = 'https://evmrpc-testnet.0g.ai/';
 const FLOW_CONTRACT_STANDARD = '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
 const INDEXER_RPC = 'https://indexer-storage-testnet-standard.0g.ai';
 ```
 
 ## Best Practices
-1. **Error Handling**:
-   - Proper error handling for file operations
-   - Validation of uploaded files
-   - Comprehensive error messages for debugging
+1. **Resource Management**:
+   - Always close ZgFile instances after use
+   - Clean up temporary files
+   - Handle errors appropriately
 
 2. **Security**:
-   - Environment variables for sensitive data
-   - Private key protection
-   - Input validation
+   - Keep your private key secure
+   - Never share your private key
+   - Use different keys for testing and production
 
-3. **Resource Management**:
-   - Proper file cleanup after operations
-   - Closing file handles
-   - Memory efficient file processing
+3. **Error Handling**:
+   - Check for upload/download errors
+   - Validate Merkle tree generation
+   - Handle network timeouts appropriately
+
+## Development
+
+For development with hot reloading:
+```bash
+npm run dev -- -k YOUR_PRIVATE_KEY <command>
+```
+
+To watch for changes and rebuild:
+```bash
+npm run watch
+```
 
 ## Next Steps
 Explore advanced SDK features in the [0G Storage TypeScript SDK documentation](https://github.com/0glabs/0g-ts-sdk). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage). 
