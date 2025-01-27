@@ -104,6 +104,13 @@ The process includes:
 
 ## Quick Start Examples
 
+### Build the project
+```bash
+npm install        # Install dependencies
+npm run build     # Build TypeScript to JavaScript 
+```
+Re-run the build if you make changes to the code.
+
 ### Upload a file
 ```bash
 npm start -- -k YOUR_PRIVATE_KEY upload ./path/to/file
@@ -161,17 +168,6 @@ const INDEXER_RPC = 'https://indexer-storage-testnet-standard.0g.ai';
    - Validate Merkle tree generation
    - Handle network timeouts appropriately
 
-## Development
-
-For development with hot reloading:
-```bash
-npm run dev -- -k YOUR_PRIVATE_KEY <command>
-```
-
-To watch for changes and rebuild:
-```bash
-npm run watch
-```
 
 ## Next Steps
 Explore advanced SDK features in the [0G Storage TypeScript SDK documentation](https://github.com/0glabs/0g-ts-sdk). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage). 
