@@ -30,57 +30,30 @@ git checkout cli-version
 
 ### Storage Client Setup
 ```typescript
-// Initialize storage client with network configuration
 import { Indexer } from '@0glabs/0g-ts-sdk';
 
-// Constants from environment variables
-const RPC_URL = process.env.RPC_URL || 'https://evmrpc-testnet.0g.ai/';
-const FLOW_CONTRACT_STANDARD = process.env.FLOW_CONTRACT_STANDARD || '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
-const INDEXER_RPC = process.env.INDEXER_RPC || 'https://indexer-storage-testnet-standard.0g.ai';
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
-
-// Initialize Indexer
-const indexer = new Indexer(INDEXER_RPC, RPC_URL, PRIVATE_KEY, FLOW_CONTRACT_STANDARD);
+const indexer = new Indexer(
+  INDEXER_RPC,           // Indexer service endpoint
+  RPC_URL,               // EVM RPC endpoint
+  PRIVATE_KEY,           // For signing transactions
+  FLOW_CONTRACT_STANDARD // Flow contract address
+);
 ```
 
-### Understanding Upload & Download
+### File Operations
 
 #### Upload Implementation
 The upload process involves both API handling and SDK operations:
 
 ```typescript
-app.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
+// Create ZgFile from file path
+const zgFile = await ZgFile.fromFilePath(filePath);
+const [tree, treeErr] = await zgFile.merkleTree();
+const [tx, uploadErr] = await indexer.upload(zgFile);
 
-  try {
-    // Create ZgFile from uploaded file
-    const zgFile = await ZgFile.fromFilePath(req.file.path);
-    const [tree, treeErr] = await zgFile.merkleTree();
-    
-    if (treeErr !== null) {
-      throw new Error(`Error generating Merkle tree: ${treeErr}`);
-    }
-
-    // Upload file to 0G Storage network
-    const [tx, uploadErr] = await indexer.upload(zgFile);
-
-    if (uploadErr !== null) {
-      throw new Error(`Upload error: ${uploadErr}`);
-    }
-
-    await zgFile.close();
-
-    res.json({
-      rootHash: tree?.rootHash() ?? '',
-      transactionHash: tx
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
+// Get file identifier and transaction hash
+const rootHash = tree?.rootHash();
+const transactionHash = tx;
 ```
 
 What happens during upload:
@@ -94,28 +67,7 @@ What happens during upload:
 The download process retrieves files using their root hash:
 
 ```typescript
-app.get('/download/:rootHash', async (req, res) => {
-  const { rootHash } = req.params;
-  const outputPath = `downloads/${rootHash}`;
-
-  try {
-    const err = await indexer.download(rootHash, outputPath, true);
-    
-    if (err !== null) {
-      throw new Error(`Download error: ${err}`);
-    }
-
-    res.download(outputPath, (err) => {
-      if (err) {
-        console.error('Download error:', err);
-        res.status(500).json({ error: 'Failed to send file' });
-      }
-    });
-  } catch (error) {
-    console.error('Download error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
-  }
-});
+const err = await indexer.download(rootHash, outputPath, true);
 ```
 
 What happens during download:
