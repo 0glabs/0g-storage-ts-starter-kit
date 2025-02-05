@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { ZgFile, Indexer } from '@0glabs/0g-ts-sdk';
 import path from 'path';
 import fs from 'fs';
-
+import { ethers } from 'ethers';
 // Network Constants
 const RPC_URL = 'https://evmrpc-testnet.0g.ai/';
 const FLOW_CONTRACT_STANDARD = '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
@@ -15,6 +15,7 @@ if (!fs.existsSync(downloadsDir)) {
 }
 
 const program = new Command();
+
 
 program
   .name('0g-storage')
@@ -29,7 +30,12 @@ program
   .action(async (filepath: string) => {
     try {
       const privateKey = program.opts().key;
-      const indexer = new Indexer(INDEXER_RPC, RPC_URL, privateKey, FLOW_CONTRACT_STANDARD);
+
+
+      const provider = new ethers.JsonRpcProvider(RPC_URL);
+      const signer = new ethers.Wallet(privateKey, provider);
+      const indexer = new Indexer(INDEXER_RPC);
+
       
       console.log('Uploading file:', filepath);
       
@@ -42,7 +48,7 @@ program
       }
 
       // Upload file
-      const [tx, uploadErr] = await indexer.upload(zgFile);
+      const [tx, uploadErr] = await indexer.upload(zgFile,RPC_URL,signer);
 
       if (uploadErr !== null) {
         throw new Error(`Upload error: ${uploadErr}`);
@@ -67,7 +73,7 @@ program
   .action(async (rootHash: string, options: { output?: string }) => {
     try {
       const privateKey = program.opts().key;
-      const indexer = new Indexer(INDEXER_RPC, RPC_URL, privateKey, FLOW_CONTRACT_STANDARD);
+      const indexer = new Indexer(INDEXER_RPC);
       
       console.log('Downloading file with root hash:', rootHash);
       
