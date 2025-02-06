@@ -27,25 +27,22 @@ git checkout cli-version
 ## Core Components (CLI Version)
 ```typescript
 import { ZgFile, Indexer } from '@0glabs/0g-ts-sdk';  // Core SDK components
+import { ethers } from 'ethers';
 ```
 
 ## Upload Process
 
 ### 1. Initialize Indexer
-The first step is to create the necessary client for blockchain interaction and node management:
+The first step is to create the necessary client for blockchain interaction:
 ```typescript
 // Initialize indexer with network configuration
-const indexer = new Indexer(
-  INDEXER_RPC,           // Indexer service endpoint
-  RPC_URL,               // EVM RPC endpoint
-  privateKey,            // For signing transactions
-  FLOW_CONTRACT_STANDARD // Flow contract address
-);
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const signer = new ethers.Wallet(privateKey, provider);
+const indexer = new Indexer(INDEXER_RPC);
 ```
 This sets up:
 - Indexer client for managing storage operations
-- Web3 connection for blockchain transactions
-- Contract interaction capabilities
+- Web3 provider and signer for blockchain transactions
 
 ### 2. File Preparation & Merkle Tree Generation
 Prepare the file and generate its Merkle tree:
@@ -67,15 +64,13 @@ During this phase:
 Execute the upload with blockchain transaction:
 ```typescript
 // Upload file and get transaction hash
-const [tx, uploadErr] = await indexer.upload(zgFile);
+const [tx, uploadErr] = await indexer.upload(zgFile, RPC_URL, signer);
 
 if (uploadErr !== null) {
   throw new Error(`Upload error: ${uploadErr}`);
 }
 
-console.log('Upload successful!');
-console.log('Root Hash:', tree?.rootHash() ?? '');
-console.log('Transaction Hash:', tx);
+await zgFile.close();  // Clean up resources
 ```
 This process:
 - Creates and signs a storage transaction
@@ -92,9 +87,6 @@ const err = await indexer.download(rootHash, outputPath, true);
 if (err !== null) {
   throw new Error(`Download error: ${err}`);
 }
-
-console.log('Download successful!');
-console.log('File saved to:', outputPath);
 ```
 The process includes:
 - File location using root hash
@@ -148,7 +140,6 @@ Download Options:
 ```typescript
 // Default network configuration
 const RPC_URL = 'https://evmrpc-testnet.0g.ai/';
-const FLOW_CONTRACT_STANDARD = '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
 const INDEXER_RPC = 'https://indexer-storage-testnet-standard.0g.ai';
 ```
 
