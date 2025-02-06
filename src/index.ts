@@ -4,6 +4,7 @@ import { ZgFile, Indexer } from '@0glabs/0g-ts-sdk';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import { ethers } from 'ethers';
 
 dotenv.config();
 
@@ -12,7 +13,6 @@ const upload = multer({ dest: 'uploads/' });
 
 // Constants from environment variables
 const RPC_URL = process.env.RPC_URL || 'https://evmrpc-testnet.0g.ai/';
-const FLOW_CONTRACT_STANDARD = process.env.FLOW_CONTRACT_STANDARD || '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
 const INDEXER_RPC = process.env.INDEXER_RPC || 'https://indexer-storage-testnet-standard.0g.ai';
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
@@ -20,8 +20,10 @@ if (!PRIVATE_KEY) {
   throw new Error('Private key not found in environment variables');
 }
 
-// Initialize Indexer
-const indexer = new Indexer(INDEXER_RPC, RPC_URL, PRIVATE_KEY, FLOW_CONTRACT_STANDARD);
+// Initialize provider, signer and indexer
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const signer = new ethers.Wallet(PRIVATE_KEY, provider);
+const indexer = new Indexer(INDEXER_RPC);
 
 app.use(express.json());
 
@@ -94,8 +96,8 @@ app.post('/upload', upload.single('file'), async (req, res) => {
       throw new Error(`Error generating Merkle tree: ${treeErr}`);
     }
 
-    // Upload file
-    const [tx, uploadErr] = await indexer.upload(zgFile);
+    // Upload file with new API syntax
+    const [tx, uploadErr] = await indexer.upload(zgFile, RPC_URL, signer);
 
     if (uploadErr !== null) {
       throw new Error(`Upload error: ${uploadErr}`);
