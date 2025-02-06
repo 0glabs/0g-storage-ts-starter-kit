@@ -6,7 +6,7 @@ import { ethers } from 'ethers';
 // Network Constants
 const RPC_URL = 'https://evmrpc-testnet.0g.ai/';
 const FLOW_CONTRACT_STANDARD = '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
-const INDEXER_RPC = 'https://indexer-storage-testnet-standard.0g.ai';
+const INDEXER_RPC = 'https://indexer-storage-testnet-turbo.0g.ai';
 
 // Create downloads directory if it doesn't exist
 const downloadsDir = path.join(process.cwd(), 'downloads');
@@ -16,26 +16,21 @@ if (!fs.existsSync(downloadsDir)) {
 
 const program = new Command();
 
-
 program
   .name('0g-storage')
   .description('CLI tool for interacting with 0G Storage network')
   .version('1.0.0')
   .requiredOption('-k, --key <private_key>', 'private key for signing transactions');
 
-program
-  .command('upload')
+const upload = program
+  .command('upload <filepath>')
   .description('Upload a file to 0G Storage')
-  .argument('<filepath>', 'path to the file to upload')
   .action(async (filepath: string) => {
     try {
       const privateKey = program.opts().key;
-
-
       const provider = new ethers.JsonRpcProvider(RPC_URL);
       const signer = new ethers.Wallet(privateKey, provider);
       const indexer = new Indexer(INDEXER_RPC);
-
       
       console.log('Uploading file:', filepath);
       
@@ -48,7 +43,7 @@ program
       }
 
       // Upload file
-      const [tx, uploadErr] = await indexer.upload(zgFile,RPC_URL,signer);
+      const [tx, uploadErr] = await indexer.upload(zgFile, RPC_URL, signer);
 
       if (uploadErr !== null) {
         throw new Error(`Upload error: ${uploadErr}`);
@@ -65,10 +60,9 @@ program
     }
   });
 
-program
-  .command('download')
+const download = program
+  .command('download <roothash>')
   .description('Download a file from 0G Storage')
-  .argument('<roothash>', 'root hash of the file to download')
   .option('-o, --output <path>', 'output path for downloaded file')
   .action(async (rootHash: string, options: { output?: string }) => {
     try {
@@ -93,7 +87,7 @@ program
     }
   });
 
-program
+const config = program
   .command('config')
   .description('Show current configuration')
   .action(() => {
