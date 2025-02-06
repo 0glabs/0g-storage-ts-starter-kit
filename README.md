@@ -30,14 +30,15 @@ git checkout cli-version
 
 ### Storage Client Setup
 ```typescript
-import { Indexer } from '@0glabs/0g-ts-sdk';
+import { Indexer, ZgFile } from '@0glabs/0g-ts-sdk';
+import { ethers } from 'ethers';
 
-const indexer = new Indexer(
-  INDEXER_RPC,           // Indexer service endpoint
-  RPC_URL,               // EVM RPC endpoint
-  PRIVATE_KEY,           // For signing transactions
-  FLOW_CONTRACT_STANDARD // Flow contract address
-);
+// Initialize provider and signer
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const signer = new ethers.Wallet(PRIVATE_KEY, provider);
+
+// Initialize indexer with new syntax
+const indexer = new Indexer(INDEXER_RPC);
 ```
 
 ### File Operations
@@ -49,7 +50,9 @@ The upload process involves both API handling and SDK operations:
 // Create ZgFile from file path
 const zgFile = await ZgFile.fromFilePath(filePath);
 const [tree, treeErr] = await zgFile.merkleTree();
-const [tx, uploadErr] = await indexer.upload(zgFile);
+
+// Upload file with new API syntax
+const [tx, uploadErr] = await indexer.upload(zgFile, RPC_URL, signer);
 
 // Get file identifier and transaction hash
 const rootHash = tree?.rootHash();
@@ -118,7 +121,6 @@ The application uses the following default network configuration which can be ov
 
 ```typescript
 const RPC_URL = 'https://evmrpc-testnet.0g.ai/';
-const FLOW_CONTRACT_STANDARD = '0x0460aA47b41a66694c0a73f667a1b795A5ED3556';
 const INDEXER_RPC = 'https://indexer-storage-testnet-standard.0g.ai';
 ```
 
