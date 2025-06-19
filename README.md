@@ -15,7 +15,7 @@ git checkout master
   - Swagger UI for API testing and documentation
   - TypeScript implementation for type safety
 
-### 2. CLI Version Branch (Coming Soon)
+### 2. CLI Version Branch
 Command-line interface implementation will be available in the cli-version branch.
 ```bash
 git checkout cli-version
